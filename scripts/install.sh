@@ -719,6 +719,42 @@ if [[ -n "$DARE_VENDOR_DIR" && -f "$DARE_VENDOR_DIR/client/__main__.py" ]]; then
     fi
 fi
 
+# Agent Teams (ACP) — pip install cool-play-agent-teams
+AGENT_TEAMS_AVAILABLE=false
+if command -v agent-teams &>/dev/null; then
+    ok "agent-teams CLI already installed"
+    AGENT_TEAMS_AVAILABLE=true
+else
+    info "  Installing agent-teams (cool-play-agent-teams)..."
+    if command -v uv &>/dev/null; then
+        if uv tool install cool-play-agent-teams 2>&1; then
+            hash -r 2>/dev/null || true
+            ok "agent-teams installed (uv tool)"
+            AGENT_TEAMS_AVAILABLE=true
+        else
+            warn "agent-teams install failed (uv) — ACP agent will not be available"
+        fi
+    elif command -v pip3 &>/dev/null; then
+        if pip3 install cool-play-agent-teams 2>&1; then
+            hash -r 2>/dev/null || true
+            ok "agent-teams installed (pip3)"
+            AGENT_TEAMS_AVAILABLE=true
+        else
+            warn "agent-teams install failed (pip3) — ACP agent will not be available"
+        fi
+    elif command -v pip &>/dev/null; then
+        if pip install cool-play-agent-teams 2>&1; then
+            hash -r 2>/dev/null || true
+            ok "agent-teams installed (pip)"
+            AGENT_TEAMS_AVAILABLE=true
+        else
+            warn "agent-teams install failed (pip) — ACP agent will not be available"
+        fi
+    else
+        warn "Neither uv, pip3, nor pip found — skipping agent-teams install"
+    fi
+fi
+
 # ── [6/9] Install AI agent CLI tools ─────────────────────
 step "[6/9] Installing AI CLI tools / 安装 AI 命令行工具..."
 info "  Clowder spawns CLI subprocesses — these are required"
@@ -855,11 +891,17 @@ if [[ "$HAS_TTY" == true ]]; then
     info "  Configure each agent / 逐个配置每只猫的认证方式："
     configure_agent_auth "Claude (布偶猫)" "claude"; configure_agent_auth "Codex (缅因猫)" "codex"
     configure_agent_auth "Gemini (暹罗猫)" "gemini"; configure_dare_auth
+    if [[ "$AGENT_TEAMS_AVAILABLE" == true ]]; then
+        ok "Agent Teams (ACP): installed — configure provider profile in Hub"
+    fi
 else
     info "  Non-interactive — skipping auth. Run each CLI to log in: claude / codex / gemini"
     if [[ -n "$DARE_VENDOR_DIR" ]]; then
         info "  Dare (狸花猫): set OPENROUTER_API_KEY in .env or run:"
         info "    node scripts/install-auth-config.mjs client-auth set --project-dir $PROJECT_DIR --client dare --mode api_key --api-key YOUR_KEY"
+    fi
+    if [[ "$AGENT_TEAMS_AVAILABLE" == true ]]; then
+        info "  Agent Teams (ACP): configure provider profile in Hub after startup"
     fi
 fi
 
